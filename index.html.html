@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Свежая новость о кампусах</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #f0f2f5;
+    color: #1a1a1a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+  }
+  .card {
+    max-width: 600px;
+    width: 90%;
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    padding: 40px 32px;
+    text-align: center;
+  }
+  .spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #e0e0e0;
+    border-top: 4px solid #6c5ce7;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 20px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .status { font-size: 16px; color: #555; line-height: 1.5; }
+  .status a { color: #6c5ce7; text-decoration: none; font-weight: 600; }
+  .status a:hover { text-decoration: underline; }
+  .news-title { font-size: 18px; font-weight: 600; margin: 16px 0 8px; line-height: 1.4; }
+  .news-meta { font-size: 13px; color: #888; margin-bottom: 20px; }
+  .news-link {
+    display: inline-block;
+    background: #6c5ce7;
+    color: #fff !important;
+    padding: 12px 28px;
+    border-radius: 10px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 15px;
+    transition: background 0.2s;
+  }
+  .news-link:hover { background: #5a4bd1; }
+  .error { color: #e74c3c; }
+  .refresh-hint { margin-top: 20px; font-size: 13px; color: #aaa; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="spinner" id="spinner"></div>
+  <div class="status" id="status">Ищем свежие новости о кампусах…</div>
+</div>
+
+<script>
+(async function() {
+  const statusEl = document.getElementById('status');
+  const spinnerEl = document.getElementById('spinner');
+  const card = document.querySelector('.card');
+
+  try {
+    const query = encodeURIComponent('кампус');
+    const url = `https://freenewsapi.ai/v1/search?q=${query}&lang=ru&date=7d&sort=date&size=50`;
+
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+
+    const data = await resp.json();
+    const articles = data.results || [];
+
+    if (articles.length === 0) {
+      spinnerEl.style.display = 'none';
+      statusEl.innerHTML = 'За последнюю неделю новостей о кампусах не найдено.<br>Попробуйте <a href="https://xn--80athfeecnr.xn--p1ai/news" target="_blank">прокампус.рф/news</a>.';
+      return;
+    }
+
+    // Фильтруем: оставляем статьи, где в заголовке есть слово "кампус"
+    const filtered = articles.filter(a => {
+      const t = (a.title || '').toLowerCase();
+      return t.includes('кампус') || t.includes('студгород') || t.includes('студенческ');
+    });
+
+    const pool = filtered.length > 0 ? filtered : articles;
+    const random = pool[Math.floor(Math.random() * pool.length)];
+
+    const dateStr = random.published_at
+      ? new Date(random.published_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
+      : '';
+
+    spinnerEl.style.display = 'none';
+    statusEl.innerHTML = `
+      <div style="font-size:13px;color:#999;margin-bottom:8px;">Найдено ${articles.length} новостей за неделю • выбрана случайная</div>
+      <div class="news-title">${random.title || 'Без заголовка'}</div>
+      <div class="news-meta">${random.host || ''} ${dateStr ? '• ' + dateStr : ''}</div>
+      <a href="${random.url}" target="_blank" class="news-link">Открыть новость →</a>
+      <div class="refresh-hint">Хотите другую? Обновите страницу (F5)</div>
+    `;
+  } catch (err) {
+    spinnerEl.style.display = 'none';
+    statusEl.innerHTML = `<span class="error">Не удалось загрузить новости.</span><br><br>Ошибка: ${err.message}<br><br>Откройте <a href="https://xn--80athfeecnr.xn--p1ai/news" target="_blank">прокампус.рф/news</a> напрямую.`;
+  }
+})();
+</script>
+</body>
+</html>
